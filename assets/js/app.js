@@ -1,4 +1,4 @@
-import { $, escapeHTML, navigate, setPageTitle, toast, timeAgo } from './helpers.js';
+import { $, $$, escapeHTML, navigate, setPageTitle, toast, timeAgo } from './helpers.js';
 import { initShell, renderComposer, renderPost, wirePosts, renderProfileHeader, wireFollowButtons, emptyState } from './components.js';
 import {
   getCurrentUser,
@@ -16,7 +16,11 @@ import {
   markConversationRead,
   sendMessage,
   getNotifications,
-  markNotificationsRead
+  markNotificationsRead,
+  getUserSettings,
+  saveUserSettings,
+  DEFAULT_SETTINGS,
+  ACCENT_PRESETS
 } from './store.js';
 
 const page = document.body.dataset.page;
@@ -38,7 +42,8 @@ async function boot() {
       chat: initChat,
       notifications: initNotifications,
       profile: initProfile,
-      'edit-profile': initEditProfile
+      'edit-profile': initEditProfile,
+      settings: initSettings
     };
 
     await routes[page]?.();
@@ -92,7 +97,7 @@ async function initSearch() {
     results.innerHTML = '<div class="empty card"><strong>Searching...</strong><p>Checking Supabase profiles.</p></div>';
     const users = await searchUsers(input.value, currentUser.id);
     const followingMap = await getFollowingMap(currentUser.id, users.map(user => user.id));
-    results.innerHTML = users.length ? users.map(user => userCard(user, followingMap)).join('') : emptyState('No users found', 'Try searching for alex, maya, product, code, or design.');
+    results.innerHTML = users.length ? users.map(user => userCard(user, followingMap)).join('') : emptyState('No users found', 'Try searching for a real username, name, or bio.');
   }
 
   input.addEventListener('input', debounce(render, 250));
@@ -304,6 +309,84 @@ async function initEditProfile() {
       toast(error.message, 'error');
     }
   });
+}
+
+
+async function initSettings() {
+  setPageTitle('Settings');
+  const form = $('#settingsForm');
+  const preview = $('#settingsPreview');
+  const resetBtn = $('#resetSettings');
+  const accentGrid = $('#accentGrid');
+  const settings = await getUserSettings(currentUser.id);
+
+  accentGrid.innerHTML = ACCENT_PRESETS.map(item => `
+    <button class="accent-swatch ${settings.accent === item.value ? 'active' : ''}" type="button" data-accent="${item.value}" style="--swatch:${item.value}">
+      <span></span><strong>${item.name}</strong>
+    </button>
+  `).join('');
+
+  form.theme.value = settings.theme;
+  form.accent.value = settings.accent;
+  form.density.value = settings.density;
+  form.fontSize.value = settings.fontSize;
+  form.motion.value = settings.motion;
+  form.radius.value = settings.radius;
+  form.glass.value = settings.glass;
+
+  function currentFormSettings() {
+    return {
+      theme: form.theme.value,
+      accent: form.accent.value,
+      density: form.density.value,
+      fontSize: form.fontSize.value,
+      motion: form.motion.value,
+      radius: form.radius.value,
+      glass: form.glass.value
+    };
+  }
+
+  function paintPreview(next = currentFormSettings()) {
+    saveUserSettings(null, next);
+    $$('.accent-swatch', accentGrid).forEach(btn => btn.classList.toggle('active', btn.dataset.accent === next.accent));
+    preview.innerHTML = `
+      <div class="settings-preview-card">
+        <div class="preview-avatar"></div>
+        <div>
+          <strong>${escapeHTML(currentUser.name)}</strong>
+          <p>Theme: ${escapeHTML(next.theme)} · Accent: ${escapeHTML(next.accent)} · Density: ${escapeHTML(next.density)}</p>
+          <button class="primary-btn" type="button">Preview button</button>
+        </div>
+      </div>
+    `;
+  }
+
+  form.addEventListener('input', () => paintPreview());
+  accentGrid.addEventListener('click', event => {
+    const btn = event.target.closest('[data-accent]');
+    if (!btn) return;
+    form.accent.value = btn.dataset.accent;
+    paintPreview();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
+      if (form[key]) form[key].value = value;
+    });
+    paintPreview(DEFAULT_SETTINGS);
+  });
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    try {
+      await saveUserSettings(currentUser.id, currentFormSettings());
+      toast('Settings saved to Supabase.');
+    } catch (error) {
+      toast(`${error.message} — settings were kept locally.`, 'error');
+    }
+  });
+
+  paintPreview(settings);
 }
 
 function debounce(fn, delay = 250) {

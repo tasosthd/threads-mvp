@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings · Loom Threads</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body data-page="settings">
+  <div class="app-shell" id="appShell">
+    <main class="main-view">
+      <header class="page-head">
+        <h1>Settings</h1>
+        <p>Control the app like a premium cockpit: theme, accent, density, motion, radius, and glass.</p>
+      </header>
+
+      <form class="settings-studio card" id="settingsForm">
+        <section class="settings-section">
+          <div>
+            <h2>Appearance</h2>
+            <p>Change the whole feel of the app instantly. Saved locally and, when SQL is installed, synced to Supabase.</p>
+          </div>
+          <div class="settings-grid">
+            <label>Theme
+              <select name="theme">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </label>
+            <label>Density
+              <select name="density">
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+                <option value="spacious">Spacious</option>
+              </select>
+            </label>
+            <label>Font size
+              <select name="fontSize">
+                <option value="small">Small</option>
+                <option value="normal">Normal</option>
+                <option value="large">Large</option>
+              </select>
+            </label>
+            <label>Motion
+              <select name="motion">
+                <option value="full">Full animations</option>
+                <option value="reduced">Reduced motion</option>
+              </select>
+            </label>
+            <label>Corners
+              <select name="radius">
+                <option value="rounded">Rounded</option>
+                <option value="sharp">Sharper</option>
+                <option value="pill">Ultra round</option>
+              </select>
+            </label>
+            <label>Glass effect
+              <select name="glass">
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div>
+            <h2>Accent color</h2>
+            <p>Pick the brand mood. This drives focus rings, unread states, glow, and premium UI details.</p>
+          </div>
+          <input name="accent" type="hidden">
+          <div class="accent-grid" id="accentGrid"></div>
+        </section>
+
+        <section class="settings-section">
+          <div>
+            <h2>Live preview</h2>
+            <p>See the current setting mix before saving it.</p>
+          </div>
+          <div id="settingsPreview" class="settings-preview"></div>
+        </section>
+
+        <div class="form-actions">
+          <button class="ghost-btn" id="resetSettings" type="button">Reset defaults</button>
+          <button class="primary-btn" type="submit">Save settings</button>
+        </div>
+      </form>
+    </main>
+  </div>
+  <script type="module" src="../assets/js/app.js"></script>
+</body>
+</html>

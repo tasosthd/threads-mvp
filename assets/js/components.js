@@ -9,7 +9,8 @@ import {
   toggleFollow,
   isFollowing,
   getTheme,
-  setTheme
+  setTheme,
+  getUserSettings
 } from './store.js';
 
 const icons = {
@@ -22,12 +23,13 @@ const icons = {
   profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>',
   heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>',
   comment: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-4-.9L3 20l1.1-4.5a8.5 8.5 0 1 1 16.9-4Z"/></svg>',
-  trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-1 4v8M9 10v8M5 6l1 15h12l1-15"/></svg>'
+  trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-1 4v8M9 10v8M5 6l1 15h12l1-15"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.1 1.65V21a2 2 0 1 1-4 0v-.09a1.8 1.8 0 0 0-1.1-1.65 1.8 1.8 0 0 0-1.98.36l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.1H3a2 2 0 1 1 0-4h.09A1.8 1.8 0 0 0 4.74 8.8a1.8 1.8 0 0 0-.36-1.98l-.06-.06A2 2 0 0 1 7.15 3.93l.06.06a1.8 1.8 0 0 0 1.98.36A1.8 1.8 0 0 0 10.9 2.7V2a2 2 0 1 1 4 0v.09a1.8 1.8 0 0 0 1.1 1.65 1.8 1.8 0 0 0 1.98-.36l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.8 1.8 0 0 0-.36 1.98A1.8 1.8 0 0 0 22.1 10H22a2 2 0 1 1 0 4h-.09A1.8 1.8 0 0 0 19.4 15Z"/></svg>'
 };
 
 export async function initShell(active = 'home', user) {
   const root = getRootPath();
-  document.documentElement.dataset.theme = getTheme();
+  await getUserSettings(user.id);
   const unread = user ? (await getNotifications(user.id)).filter(n => !n.read).length : 0;
   const shell = $('#appShell');
   if (!shell || !user) return;
@@ -44,6 +46,7 @@ export async function initShell(active = 'home', user) {
         ${navLink(root, 'pages/inbox.html', 'inbox', active, icons.inbox, 'Inbox')}
         ${navLink(root, 'pages/notifications.html', 'notifications', active, icons.alerts, `Alerts${unread ? `<b>${unread}</b>` : ''}`)}
         ${navLink(root, `pages/profile.html?u=${user.username}`, 'profile', active, icons.profile, 'Profile')}
+        ${navLink(root, 'pages/settings.html', 'settings', active, icons.settings, 'Settings')}
       </nav>
       <div class="nav-footer">
         <button class="theme-toggle" id="themeToggle" type="button">${getTheme() === 'dark' ? '☀ Light' : '☾ Dark'}</button>
@@ -60,6 +63,7 @@ export async function initShell(active = 'home', user) {
       ${mobileLink(root, 'pages/create.html', 'create', active, icons.create)}
       ${mobileLink(root, 'pages/inbox.html', 'inbox', active, icons.inbox)}
       ${mobileLink(root, `pages/profile.html?u=${user.username}`, 'profile', active, icons.profile)}
+      ${mobileLink(root, 'pages/settings.html', 'settings', active, icons.settings)}
     </nav>
   `);
   $('#logoutBtn')?.addEventListener('click', async () => {

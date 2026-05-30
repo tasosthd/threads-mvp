@@ -2,15 +2,115 @@ import { supabase, AUTH_REDIRECT_URL, PASSWORD_RESET_REDIRECT_URL } from './supa
 import { normalizeUsername } from './helpers.js';
 
 const THEME_KEY = 'loom_threads_theme_v2';
+const SETTINGS_KEY = 'loom_threads_settings_v3';
+
+export const DEFAULT_SETTINGS = {
+  theme: 'dark',
+  accent: '#7c3aed',
+  density: 'comfortable',
+  fontSize: 'normal',
+  motion: 'full',
+  radius: 'rounded',
+  glass: 'on'
+};
+
+export const ACCENT_PRESETS = [
+  { name: 'Violet', value: '#7c3aed' },
+  { name: 'Blue', value: '#2563eb' },
+  { name: 'Emerald', value: '#059669' },
+  { name: 'Rose', value: '#e11d48' },
+  { name: 'Amber', value: '#d97706' },
+  { name: 'Cyan', value: '#0891b2' }
+];
 
 export function getTheme() {
-  return localStorage.getItem(THEME_KEY) || 'dark';
+  return getLocalSettings().theme || localStorage.getItem(THEME_KEY) || DEFAULT_SETTINGS.theme;
+}
+
+export function getLocalSettings() {
+  try {
+    return { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}) };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export function applySettings(settings = getLocalSettings()) {
+  const next = { ...DEFAULT_SETTINGS, ...settings };
+  const root = document.documentElement;
+  root.dataset.theme = next.theme;
+  root.dataset.density = next.density;
+  root.dataset.fontSize = next.fontSize;
+  root.dataset.motion = next.motion;
+  root.dataset.radius = next.radius;
+  root.dataset.glass = next.glass;
+  root.style.setProperty('--accent', next.accent || DEFAULT_SETTINGS.accent);
+  localStorage.setItem(THEME_KEY, next.theme);
+  return next;
+}
+
+export function saveLocalSettings(settings) {
+  const next = applySettings({ ...getLocalSettings(), ...settings });
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+  return next;
 }
 
 export function setTheme(theme) {
-  localStorage.setItem(THEME_KEY, theme);
-  document.documentElement.dataset.theme = theme;
+  return saveLocalSettings({ theme });
 }
+
+export async function getUserSettings(userId) {
+  const local = getLocalSettings();
+  if (!userId) return local;
+
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .select('theme, accent, density, font_size, motion, radius, glass')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Remote settings unavailable. Run supabase/settings-upgrade.sql to sync preferences.', error.message);
+    return applySettings(local);
+  }
+
+  if (!data) return applySettings(local);
+
+  const remote = {
+    theme: data.theme || local.theme,
+    accent: data.accent || local.accent,
+    density: data.density || local.density,
+    fontSize: data.font_size || local.fontSize,
+    motion: data.motion || local.motion,
+    radius: data.radius || local.radius,
+    glass: data.glass || local.glass
+  };
+  saveLocalSettings(remote);
+  return remote;
+}
+
+export async function saveUserSettings(userId, settings) {
+  const next = saveLocalSettings(settings);
+  if (!userId) return next;
+
+  const payload = {
+    user_id: userId,
+    theme: next.theme,
+    accent: next.accent,
+    density: next.density,
+    font_size: next.fontSize,
+    motion: next.motion,
+    radius: next.radius,
+    glass: next.glass,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase.from('user_preferences').upsert(payload, { onConflict: 'user_id' });
+  if (error) throw new Error(error.message);
+  return next;
+}
+
+applySettings(getLocalSettings());
 
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
