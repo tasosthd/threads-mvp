@@ -20,7 +20,10 @@ No Google login. No Apple login. No Facebook login. No OAuth. Email/username + p
 - Delete own posts
 - Search users
 - Follow/unfollow users
-- Inbox/messages
+- Inbox conversation list
+- Dedicated chat page for messaging one real Supabase user
+- Unread message indicators
+- Message read receipts when opened
 - Notifications
 - Profile page
 - Edit profile page
@@ -42,6 +45,7 @@ threads-mvp/
 │   ├── search.html
 │   ├── create.html
 │   ├── inbox.html
+│   ├── chat.html
 │   ├── notifications.html
 │   ├── profile.html
 │   └── edit-profile.html
@@ -59,7 +63,8 @@ threads-mvp/
 │       ├── store.js
 │       └── supabase-config.js
 └── supabase/
-    └── schema.sql
+    ├── schema.sql
+    └── messaging-upgrade.sql
 ```
 
 ## Step 1: Create your Supabase project
@@ -72,7 +77,67 @@ threads-mvp/
 6. Paste it into Supabase SQL Editor.
 7. Click **Run**.
 
-This creates all database tables, indexes, policies, auth trigger, username login resolver, and demo feed content.
+This creates all database tables, indexes, policies, auth trigger, username login resolver, the DM system, and demo feed content.
+
+If you already ran the previous Supabase ZIP SQL and do not want to reset your project, run only this upgrade file instead:
+
+```txt
+supabase/messaging-upgrade.sql
+```
+
+Paste it into **Supabase Dashboard → SQL Editor → New query → Run**. It safely upgrades the old messages columns from `from_id/to_id/text/read` to `sender_id/receiver_id/content/is_read` and refreshes the RLS policies.
+
+
+## Messaging architecture
+
+The DM system uses one Supabase table: `public.messages`.
+
+```txt
+messages
+├── id
+├── sender_id
+├── receiver_id
+├── content
+├── is_read
+└── created_at
+```
+
+The frontend flow is:
+
+```txt
+pages/inbox.html → list conversation previews
+pages/chat.html?user=USER_ID → open one private conversation
+assets/js/store.js → getConversationSummaries(), getConversation(), sendMessage(), markConversationRead()
+```
+
+Security rules:
+
+- A user can only read messages where they are `sender_id` or `receiver_id`.
+- A user can only insert messages where `sender_id = auth.uid()`.
+- A receiver can mark their received messages as read.
+- Self-DMs are blocked.
+
+## How to test messaging with two users
+
+1. Sign up with User A.
+2. Log out.
+3. Sign up with User B.
+4. Stay logged in as User B and create a post or make sure User B appears in Search.
+5. Log out and log in as User A.
+6. Go to Search.
+7. Click **Message** on User B.
+8. Send a message.
+9. Log out and log in as User B.
+10. Go to Inbox.
+11. You should see User A with an unread badge.
+12. Open the chat. The unread message becomes read.
+13. Reply to User A.
+
+You can verify database writes in:
+
+```txt
+Supabase → Table Editor → messages
+```
 
 ## Step 2: Put your Supabase URL and anon key here
 

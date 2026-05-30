@@ -17,6 +17,7 @@ const icons = {
   search: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.8 18.6a7.8 7.8 0 1 1 0-15.6 7.8 7.8 0 0 1 0 15.6Zm6-1.8L22 22"/></svg>',
   create: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
   inbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>',
+  message: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-9 8.4 9.8 9.8 0 0 1-3.7-.8L3 21l1.4-4.7A8.3 8.3 0 0 1 3 12a8.5 8.5 0 1 1 18 0Z"/><path d="M8 11h8M8 15h5"/></svg>',
   alerts: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
   profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>',
   heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>',
@@ -195,7 +196,7 @@ export async function renderProfileHeader(user, currentUser) {
       <div class="profile-top">
         <img class="profile-avatar" src="${escapeHTML(user.avatar)}" alt="${escapeHTML(user.name)} avatar">
         <div class="profile-actions">
-          ${own ? `<a class="ghost-btn" href="${root}pages/edit-profile.html">Edit profile</a>` : `<button class="primary-btn follow-btn" data-user-id="${user.id}" type="button">${following ? 'Following' : 'Follow'}</button>`}
+          ${own ? `<a class="ghost-btn" href="${root}pages/edit-profile.html">Edit profile</a>` : `<a class="ghost-btn message-link" href="${root}pages/chat.html?user=${user.id}">${icons.message}<span>Message</span></a><button class="primary-btn follow-btn" data-user-id="${user.id}" type="button">${following ? 'Following' : 'Follow'}</button>`}
         </div>
       </div>
       <h1>${escapeHTML(user.name)}</h1>

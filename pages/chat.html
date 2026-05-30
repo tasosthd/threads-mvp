@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat · Loom Threads</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body data-page="chat">
+  <div class="app-shell" id="appShell">
+    <main class="main-view chat-view">
+      <header class="page-head chat-head" id="chatHeader">
+        <h1>Conversation</h1>
+        <p>Loading Supabase chat...</p>
+      </header>
+
+      <section class="chat-thread card" id="chatThread" aria-live="polite">
+        <div class="empty"><strong>Loading messages...</strong><p>Opening your private conversation.</p></div>
+      </section>
+
+      <form class="chat-form card" id="chatForm">
+        <textarea id="chatInput" name="message" rows="1" maxlength="1000" placeholder="Write a message..." autocomplete="off" required></textarea>
+        <button class="primary-btn send-btn" type="submit" aria-label="Send message">Send</button>
+      </form>
+    </main>
+  </div>
+  <script type="module" src="../assets/js/app.js"></script>
+</body>
+</html>

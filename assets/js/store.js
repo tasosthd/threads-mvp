@@ -319,22 +319,85 @@ export async function getFollowingMap(currentUserId, userIds = []) {
   return new Map(data.map(row => [row.following_id, true]));
 }
 
-export async function getInbox(userId) {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('id, from_id, to_id, text, read, created_at')
-    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data.map(row => ({ id: row.id, fromId: row.from_id, toId: row.to_id, text: row.text, read: row.read, createdAt: row.created_at }));
+
+function mapMessage(row) {
+  return {
+    id: row.id,
+    senderId: row.sender_id,
+    receiverId: row.receiver_id,
+    content: row.content,
+    isRead: row.is_read,
+    createdAt: row.created_at
+  };
 }
 
-export async function sendMessage(fromId, toId, text) {
-  const body = String(text).trim();
-  if (!body) throw new Error('Message cannot be empty.');
-  const { error } = await supabase.from('messages').insert({ from_id: fromId, to_id: toId, text: body });
+export async function getInbox(userId) {
+  return getConversationSummaries(userId);
+}
+
+export async function getConversationSummaries(userId) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('id, sender_id, receiver_id, content, is_read, created_at')
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  await supabase.from('notifications').insert({ user_id: toId, actor_id: fromId, type: 'message', text: 'sent you a message' });
+
+  const latestByUser = new Map();
+  const unreadByUser = new Map();
+
+  for (const row of data || []) {
+    const otherId = row.sender_id === userId ? row.receiver_id : row.sender_id;
+    if (!latestByUser.has(otherId)) latestByUser.set(otherId, mapMessage(row));
+    if (row.receiver_id === userId && !row.is_read) {
+      unreadByUser.set(otherId, (unreadByUser.get(otherId) || 0) + 1);
+    }
+  }
+
+  const usersById = await getUsersByIds([...latestByUser.keys()]);
+  return [...latestByUser.entries()].map(([otherUserId, lastMessage]) => ({
+    otherUser: usersById.get(otherUserId),
+    otherUserId,
+    lastMessage,
+    unreadCount: unreadByUser.get(otherUserId) || 0
+  })).filter(item => item.otherUser);
+}
+
+export async function getConversation(currentUserId, otherUserId) {
+  if (!otherUserId || otherUserId === currentUserId) throw new Error('Choose another user to message.');
+  const { data, error } = await supabase
+    .from('messages')
+    .select('id, sender_id, receiver_id, content, is_read, created_at')
+    .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapMessage);
+}
+
+export async function markConversationRead(currentUserId, otherUserId) {
+  const { error } = await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('sender_id', otherUserId)
+    .eq('receiver_id', currentUserId)
+    .eq('is_read', false);
+  if (error) throw new Error(error.message);
+}
+
+export async function sendMessage(senderId, receiverId, content) {
+  const body = String(content).trim();
+  if (!body) throw new Error('Message cannot be empty.');
+  if (body.length > 1000) throw new Error('Message must stay under 1000 characters.');
+  if (senderId === receiverId) throw new Error('You cannot message yourself.');
+
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({ sender_id: senderId, receiver_id: receiverId, content: body })
+    .select('id, sender_id, receiver_id, content, is_read, created_at')
+    .single();
+  if (error) throw new Error(error.message);
+  await supabase.from('notifications').insert({ user_id: receiverId, actor_id: senderId, type: 'message', text: 'sent you a message' });
+  return mapMessage(data);
 }
 
 export async function getNotifications(userId) {

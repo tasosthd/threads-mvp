@@ -9,9 +9,11 @@ import {
   getUserByUsername,
   getPostsByUser,
   updateProfile,
-  getInbox,
+  getConversationSummaries,
+  getConversation,
   getUserById,
   getUsersByIds,
+  markConversationRead,
   sendMessage,
   getNotifications,
   markNotificationsRead
@@ -33,6 +35,7 @@ async function boot() {
       search: initSearch,
       create: initCreate,
       inbox: initInbox,
+      chat: initChat,
       notifications: initNotifications,
       profile: initProfile,
       'edit-profile': initEditProfile
@@ -105,7 +108,10 @@ function userCard(user, followingMap) {
         <img src="${escapeHTML(user.avatar)}" alt="${escapeHTML(user.name)} avatar">
         <span><strong>${escapeHTML(user.name)}</strong><small>@${escapeHTML(user.username)}</small><em>${escapeHTML(user.bio)}</em></span>
       </a>
-      <button class="follow-btn ${followed ? 'soft' : ''}" data-user-id="${user.id}" type="button">${followed ? 'Following' : 'Follow'}</button>
+      <div class="user-card-actions">
+        <a class="ghost-btn mini-action" href="chat.html?user=${user.id}">Message</a>
+        <button class="follow-btn ${followed ? 'soft' : ''}" data-user-id="${user.id}" type="button">${followed ? 'Following' : 'Follow'}</button>
+      </div>
     </article>
   `;
 }
@@ -123,37 +129,118 @@ async function initCreate() {
   });
 }
 
+
 async function initInbox() {
   setPageTitle('Inbox');
   const inbox = $('#inboxList');
-  const messageForm = $('#messageForm');
-  const recipient = $('#recipient');
-  const users = await searchUsers('', currentUser.id);
-  recipient.innerHTML = users.map(user => `<option value="${user.id}">${escapeHTML(user.name)} (@${escapeHTML(user.username)})</option>`).join('');
+  const searchInput = $('#newMessageSearch');
+  const usersMount = $('#newMessageUsers');
 
-  messageForm.addEventListener('submit', async event => {
+  async function renderConversations() {
+    inbox.innerHTML = '<div class="empty card"><strong>Loading conversations...</strong><p>Pulling your DMs from Supabase.</p></div>';
+    const conversations = await getConversationSummaries(currentUser.id);
+    inbox.innerHTML = conversations.length ? conversations.map(renderConversationPreview).join('') : emptyState('No conversations yet', 'Search a user below or tap Message on any profile to start a DM.');
+  }
+
+  async function renderUserSearch() {
+    const users = await searchUsers(searchInput.value, currentUser.id);
+    usersMount.innerHTML = users.length ? users.slice(0, 8).map(user => `
+      <a class="user-card compact card" href="chat.html?user=${user.id}">
+        <span class="user-card-main">
+          <img src="${escapeHTML(user.avatar)}" alt="${escapeHTML(user.name)} avatar">
+          <span><strong>${escapeHTML(user.name)}</strong><small>@${escapeHTML(user.username)}</small></span>
+        </span>
+        <span class="ghost-btn mini-action">Message</span>
+      </a>
+    `).join('') : '<div class="empty card"><strong>No users found</strong><p>Try another name or username.</p></div>';
+  }
+
+  searchInput.addEventListener('input', debounce(renderUserSearch, 250));
+  await renderConversations();
+  await renderUserSearch();
+}
+
+function renderConversationPreview(item) {
+  const user = item.otherUser;
+  const outgoing = item.lastMessage.senderId === currentUser.id;
+  return `
+    <a class="conversation-card card ${item.unreadCount ? 'has-unread' : ''}" href="chat.html?user=${user.id}">
+      <img src="${escapeHTML(user.avatar)}" alt="${escapeHTML(user.name)} avatar">
+      <div class="conversation-main">
+        <div class="conversation-top"><strong>${escapeHTML(user.name)}</strong><small>${timeAgo(item.lastMessage.createdAt)}</small></div>
+        <span>@${escapeHTML(user.username)}</span>
+        <p>${outgoing ? 'You: ' : ''}${escapeHTML(item.lastMessage.content)}</p>
+      </div>
+      ${item.unreadCount ? `<b class="unread-dot">${item.unreadCount}</b>` : ''}
+    </a>
+  `;
+}
+
+async function initChat() {
+  const params = new URLSearchParams(location.search);
+  const otherUserId = params.get('user');
+  const chat = $('#chatThread');
+  const form = $('#chatForm');
+  const input = $('#chatInput');
+  const header = $('#chatHeader');
+
+  const otherUser = await getUserById(otherUserId);
+  if (!otherUser || otherUser.id === currentUser.id) {
+    header.innerHTML = '<h1>Conversation</h1><p>User not found.</p>';
+    chat.innerHTML = emptyState('Cannot open chat', 'Choose another real Supabase user from Search or Inbox.');
+    form.hidden = true;
+    return;
+  }
+
+  setPageTitle(`Chat with ${otherUser.name}`);
+  header.innerHTML = `
+    <a class="chat-back" href="inbox.html">← Inbox</a>
+    <div class="chat-person">
+      <img src="${escapeHTML(otherUser.avatar)}" alt="${escapeHTML(otherUser.name)} avatar">
+      <span><h1>${escapeHTML(otherUser.name)}</h1><p>@${escapeHTML(otherUser.username)}</p></span>
+    </div>
+  `;
+
+  async function renderConversation() {
+    const messages = await getConversation(currentUser.id, otherUser.id);
+    chat.innerHTML = messages.length ? messages.map(message => `
+      <article class="chat-bubble ${message.senderId === currentUser.id ? 'mine' : 'theirs'}">
+        <p>${escapeHTML(message.content)}</p>
+        <small>${timeAgo(message.createdAt)}${message.senderId === currentUser.id && message.isRead ? ' · Read' : ''}</small>
+      </article>
+    `).join('') : emptyState('No messages yet', `Send ${escapeHTML(otherUser.name)} the first message.`);
+    requestAnimationFrame(() => chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' }));
+  }
+
+  form.addEventListener('submit', async event => {
     event.preventDefault();
+    const body = input.value.trim();
+    if (!body) return;
+    const optimistic = document.createElement('article');
+    optimistic.className = 'chat-bubble mine sending';
+    optimistic.innerHTML = `<p>${escapeHTML(body)}</p><small>Sending...</small>`;
+    chat.appendChild(optimistic);
+    chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
+    input.value = '';
     try {
-      await sendMessage(currentUser.id, recipient.value, messageForm.message.value);
-      messageForm.reset();
-      toast('Message sent.');
-      await render();
+      await sendMessage(currentUser.id, otherUser.id, body);
+      await renderConversation();
     } catch (error) {
+      optimistic.remove();
+      input.value = body;
       toast(error.message, 'error');
     }
   });
 
-  async function render() {
-    const messages = await getInbox(currentUser.id);
-    const usersById = await getUsersByIds(messages.flatMap(message => [message.fromId, message.toId]));
-    inbox.innerHTML = messages.length ? messages.map(message => {
-      const other = usersById.get(message.fromId === currentUser.id ? message.toId : message.fromId);
-      const outgoing = message.fromId === currentUser.id;
-      return `<article class="message-card card"><img src="${escapeHTML(other?.avatar || '')}" alt=""><div><strong>${outgoing ? 'To' : 'From'} ${escapeHTML(other?.name || 'User')}</strong><p>${escapeHTML(message.text)}</p><small>${timeAgo(message.createdAt)}</small></div></article>`;
-    }).join('') : emptyState('Inbox empty', 'Send a message and start building your network.');
-  }
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
 
-  await render();
+  await markConversationRead(currentUser.id, otherUser.id);
+  await renderConversation();
 }
 
 async function initNotifications() {

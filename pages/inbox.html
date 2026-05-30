@@ -9,17 +9,35 @@
 <body data-page="inbox">
   <div class="app-shell" id="appShell">
     <main class="main-view">
-      <header class="page-head"><h1>Inbox</h1><p>Simple local messages for MVP testing.</p></header>
-      <form class="settings-card card" id="messageForm">
-        <label>Send to
-          <select id="recipient" name="recipient"></select>
-        </label>
-        <label>Message
-          <input name="message" placeholder="Write a message..." autocomplete="off" required>
-        </label>
-        <div class="form-actions"><button class="primary-btn" type="submit">Send message</button></div>
-      </form>
-      <section class="feed-stack" id="inboxList" style="margin-top:12px"></section>
+      <header class="page-head">
+        <h1>Inbox</h1>
+        <p>Your Supabase conversations, unread messages, and fast DM launchpad.</p>
+      </header>
+
+      <section class="dm-layout">
+        <div class="dm-panel">
+          <div class="section-title">
+            <span>
+              <strong>Conversations</strong>
+              <small>Tap a user to open the full chat.</small>
+            </span>
+          </div>
+          <section class="feed-stack" id="inboxList"></section>
+        </div>
+
+        <aside class="dm-panel new-message-panel">
+          <div class="section-title">
+            <span>
+              <strong>Start a message</strong>
+              <small>Search Supabase users and open a DM.</small>
+            </span>
+          </div>
+          <label class="search-box compact-search">
+            <input id="newMessageSearch" type="search" placeholder="Search people..." autocomplete="off">
+          </label>
+          <section class="feed-stack" id="newMessageUsers"></section>
+        </aside>
+      </section>
     </main>
   </div>
   <script type="module" src="../assets/js/app.js"></script>
