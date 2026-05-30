@@ -1,22 +1,36 @@
-# Loom Threads MVP
+# Loom Threads Supabase MVP
 
-A premium Threads/X-style social web app MVP using HTML, CSS, and vanilla JavaScript. It uses localStorage for authentication, posts, likes, comments, follows, notifications, messages, profile edits, theme, and session persistence.
+A premium Threads/X-style social media MVP using plain **HTML + CSS + JavaScript** with **Supabase Auth + Supabase Postgres**.
 
-## Features
+No Google login. No Apple login. No Facebook login. No OAuth. Email/username + password only.
 
-- Custom email/username + password signup and login
-- No Google, Apple, Facebook, or third-party OAuth
+## What is included
+
+- Custom signup page
+- Custom login page
+- Email or username login
+- Password show/hide button
+- Supabase email/password authentication
+- Supabase session persistence
 - Protected app pages
-- Home feed, Search, Create Post, Inbox, Notifications, Profile, Edit Profile
-- Like, comment, delete own posts
+- Home feed
+- Create post
+- Likes
+- Comments
+- Delete own posts
+- Search users
 - Follow/unfollow users
-- Edit profile, avatar URL, display name, username, bio, location, website
-- Demo users and posts included
-- Light/dark mode
-- Responsive shared navbar across every app page
-- Backend-ready service structure in `assets/js/store.js`
+- Inbox/messages
+- Notifications
+- Profile page
+- Edit profile page
+- Profile picture URL support
+- Dark/light mode
+- Larger polished SVG icons
+- Mobile-first responsive UI
+- Supabase SQL schema with RLS policies
 
-## Project Structure
+## Folder structure
 
 ```txt
 threads-mvp/
@@ -31,86 +45,189 @@ threads-mvp/
 │   ├── notifications.html
 │   ├── profile.html
 │   └── edit-profile.html
-└── assets/
-    ├── css/
-    │   └── styles.css
-    ├── img/
-    │   └── logo.svg
-    └── js/
-        ├── app.js
-        ├── auth.js
-        ├── components.js
-        ├── data.js
-        ├── helpers.js
-        └── store.js
+├── assets/
+│   ├── css/
+│   │   └── styles.css
+│   ├── img/
+│   │   └── logo.svg
+│   └── js/
+│       ├── app.js
+│       ├── auth.js
+│       ├── components.js
+│       ├── data.js
+│       ├── helpers.js
+│       ├── store.js
+│       └── supabase-config.js
+└── supabase/
+    └── schema.sql
 ```
 
-## Run Locally
+## Step 1: Create your Supabase project
 
-Because this app uses ES modules, open it with a local server instead of double-clicking HTML files.
+1. Go to Supabase.
+2. Create a new project.
+3. Open **SQL Editor**.
+4. Open this file in the project: `supabase/schema.sql`.
+5. Copy the whole SQL file.
+6. Paste it into Supabase SQL Editor.
+7. Click **Run**.
 
-### Option 1: VS Code
+This creates all database tables, indexes, policies, auth trigger, username login resolver, and demo feed content.
 
-1. Open the folder in VS Code.
-2. Install the **Live Server** extension.
-3. Right-click `index.html` and choose **Open with Live Server**.
-
-### Option 2: Python
-
-```bash
-cd threads-mvp
-python -m http.server 5173
-```
+## Step 2: Put your Supabase URL and anon key here
 
 Open:
 
 ```txt
-http://localhost:5173
+assets/js/supabase-config.js
 ```
 
-## Demo Login
+Paste your values here:
 
-Use any seeded demo account:
+```js
+export const SUPABASE_URL = 'PASTE_YOUR_SUPABASE_PROJECT_URL_HERE';
+export const SUPABASE_ANON_KEY = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
+```
+
+Get them from Supabase:
 
 ```txt
-Email: alex@demo.com
-Username: alex
-Password: password123
+Supabase Dashboard → Project Settings → API
 ```
+
+Use:
 
 ```txt
-Email: maya@demo.com
-Username: maya
-Password: password123
+Project URL
+anon public key
 ```
 
-Or create a new account from the signup page.
+Do **not** put the `service_role` key in this app. The browser should only ever receive the anon/public key.
 
-## Deploy to GitHub + Vercel
+## Step 3: Set your Supabase fallback/redirect URL
 
-1. Create a new GitHub repository.
-2. Upload every file/folder in this project.
-3. Open Vercel.
-4. Click **Add New Project**.
-5. Import the GitHub repo.
-6. Framework preset: **Other** or **Static**.
-7. Build command: leave empty.
-8. Output directory: leave empty or use `.`.
-9. Deploy.
+The app uses this in:
 
-## Backend Upgrade Path
+```txt
+assets/js/supabase-config.js
+```
 
-This MVP stores everything in localStorage. To connect a real backend later:
+```js
+export const AUTH_REDIRECT_URL = `${window.location.origin}/login.html`;
+```
 
-- Replace functions inside `assets/js/store.js` with API calls.
-- Keep the UI/pages almost the same.
-- Add password hashing server-side.
-- Add real sessions/JWT/httpOnly cookies.
-- Add database tables for users, posts, comments, likes, follows, messages, notifications.
+In Supabase, go to:
 
-Recommended backend options:
+```txt
+Authentication → URL Configuration
+```
 
-- Supabase
-- Firebase
-- Node.js + Express + PostgreSQL
-- Laravel + MySQL
+Set:
+
+```txt
+Site URL: your deployed app URL
+```
+
+Example local Site URL:
+
+```txt
+http://127.0.0.1:5500
+```
+
+Example deployed Site URL:
+
+```txt
+https://your-app.vercel.app
+```
+
+Then add Redirect URLs:
+
+```txt
+http://127.0.0.1:5500/login.html
+https://your-app.vercel.app/login.html
+```
+
+If you use a custom domain later, add that too:
+
+```txt
+https://yourdomain.com/login.html
+```
+
+## Step 4: Enable email/password auth
+
+In Supabase:
+
+```txt
+Authentication → Providers → Email
+```
+
+Enable email provider.
+
+You can choose whether email confirmations are required:
+
+- If confirmation is ON: users must confirm their email before login.
+- If confirmation is OFF: users can login immediately after signup.
+
+For real production, keep confirmation ON and configure SMTP.
+
+## Step 5: Run locally
+
+This app uses JavaScript modules, so run it with a local server.
+
+Easy option with VS Code:
+
+1. Install the **Live Server** extension.
+2. Right-click `index.html`.
+3. Click **Open with Live Server**.
+
+Or use Python:
+
+```bash
+python -m http.server 5500
+```
+
+Then open:
+
+```txt
+http://127.0.0.1:5500
+```
+
+## Step 6: Deploy to GitHub + Vercel
+
+1. Create a GitHub repo.
+2. Upload all project files.
+3. Go to Vercel.
+4. Import the GitHub repo.
+5. Deploy.
+6. Copy your Vercel URL.
+7. Add it in Supabase:
+
+```txt
+Authentication → URL Configuration → Site URL + Redirect URLs
+```
+
+Example:
+
+```txt
+https://your-app.vercel.app
+https://your-app.vercel.app/login.html
+```
+
+## Important MVP security note
+
+This is a frontend-only MVP. Username login is handled with a Supabase SQL function called `resolve_login_email` because Supabase Auth signs users in with email/password. For a serious production app, the next upgrade is to move username login and advanced notification logic into Supabase Edge Functions.
+
+## Real startup upgrade path
+
+High-ROI next moves:
+
+1. Add image uploads with Supabase Storage.
+2. Add realtime feed updates with Supabase Realtime.
+3. Add password reset flow.
+4. Add email verification SMTP through Resend.
+5. Add report/block systems.
+6. Add rate limits with Edge Functions.
+7. Add premium profile badges or creator subscriptions.
+8. Add SEO landing page outside the protected app.
+
+Ship it, test it, improve it. MVP first, empire later.

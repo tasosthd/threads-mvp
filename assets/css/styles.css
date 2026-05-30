@@ -98,7 +98,9 @@ input:focus, textarea:focus, select:focus { border-color: color-mix(in srgb, var
 .brand img { width:38px; height:38px; border-radius:12px; }
 .nav-list { display:grid; gap:6px; margin-top:22px; }
 .nav-link { display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:18px; color:var(--muted); transition:.2s; font-weight:850; }
-.nav-link span { display:grid; place-items:center; width:24px; height:24px; font-size:1.15rem; }
+.nav-icon { display:grid; place-items:center; width:30px; height:30px; flex:0 0 30px; }
+.nav-icon svg { width:25px; height:25px; stroke:currentColor; fill:none; stroke-width:2.25; stroke-linecap:round; stroke-linejoin:round; }
+.nav-link.active .nav-icon svg, .mobile-link.active .nav-icon svg { stroke-width:2.7; }
 .nav-link em { font-style:normal; display:flex; align-items:center; gap:8px; }
 .nav-link b { min-width:18px; height:18px; display:inline-grid; place-items:center; border-radius:999px; background:var(--danger); color:white; font-size:.7rem; }
 .nav-link:hover, .nav-link.active { background:var(--card); color:var(--text); transform: translateX(2px); }
@@ -137,9 +139,11 @@ input:focus, textarea:focus, select:focus { border-color: color-mix(in srgb, var
 .post p { margin:7px 0 12px; line-height:1.55; overflow-wrap:anywhere; }
 .post p a { color:#93c5fd; }
 .post-actions { display:flex; gap:10px; }
-.action { border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:999px; padding:8px 12px; font-weight:900; }
+.action { border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:999px; padding:9px 13px; font-weight:900; display:inline-flex; align-items:center; gap:7px; }
+.action svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2.35; stroke-linecap:round; stroke-linejoin:round; }
 .action.liked { color:#fb7185; background:rgba(244,63,94,.10); border-color:rgba(244,63,94,.25); }
-.icon-btn { padding:7px 10px; background:transparent; color:var(--muted); border:1px solid var(--line); }
+.icon-btn { padding:8px 11px; background:transparent; color:var(--muted); border:1px solid var(--line); display:inline-grid; place-items:center; }
+.icon-btn svg { width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:2.35; stroke-linecap:round; stroke-linejoin:round; }
 .icon-btn.danger { color:var(--danger); }
 .comment-panel { display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px; }
 .comment-panel.open { display:grid; gap:10px; }
@@ -198,7 +202,9 @@ input:focus, textarea:focus, select:focus { border-color: color-mix(in srgb, var
   .main-view { width:100%; margin-left:0; padding:12px; }
   .page-head { margin:-12px -12px 12px; padding:14px 12px; }
   .mobile-nav { display:flex; position:fixed; left:12px; right:12px; bottom:12px; z-index:40; padding:8px; border:1px solid var(--line); border-radius:24px; background:color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter:blur(20px); box-shadow:var(--shadow); justify-content:space-between; }
-  .mobile-link { width:20%; height:44px; display:grid; place-items:center; border-radius:17px; color:var(--muted); font-size:1.2rem; font-weight:950; }
+  .mobile-link { width:20%; height:48px; display:grid; place-items:center; border-radius:17px; color:var(--muted); font-size:1.2rem; font-weight:950; }
+  .mobile-link .nav-icon { width:32px; height:32px; }
+  .mobile-link .nav-icon svg { width:27px; height:27px; }
   .mobile-link.active { background:var(--card); color:var(--text); }
   .composer, .post { grid-template-columns:38px 1fr; padding:12px; }
   .composer > img, .post img, .user-card img, .message-card img, .notification img { width:38px; height:38px; }
@@ -209,3 +215,7 @@ input:focus, textarea:focus, select:focus { border-color: color-mix(in srgb, var
   .auth-card { padding:20px; border-radius:24px; }
   .comment-form { flex-direction:column; }
 }
+
+/* Supabase MVP polish */
+.primary-btn:disabled { opacity:.65; cursor:not-allowed; transform:none!important; }
+.config-note { font-size:.82rem; color:var(--muted); margin-top:8px; }

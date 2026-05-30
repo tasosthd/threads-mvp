@@ -1,43 +1,7 @@
-import { seedUsers, seedPosts, seedFollows, seedMessages, seedNotifications } from './data.js';
-import { uid, nowISO, normalizeUsername } from './helpers.js';
+import { supabase, AUTH_REDIRECT_URL } from './supabase-config.js';
+import { normalizeUsername } from './helpers.js';
 
-const DB_KEY = 'loom_threads_db_v1';
-const SESSION_KEY = 'loom_threads_session_v1';
-const THEME_KEY = 'loom_threads_theme_v1';
-
-const defaultDB = () => ({
-  users: seedUsers,
-  posts: seedPosts,
-  follows: seedFollows,
-  messages: seedMessages,
-  notifications: seedNotifications
-});
-
-export function getDB() {
-  const raw = localStorage.getItem(DB_KEY);
-  if (!raw) {
-    const db = defaultDB();
-    saveDB(db);
-    return db;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const db = defaultDB();
-    saveDB(db);
-    return db;
-  }
-}
-
-export function saveDB(db) {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
-}
-
-export function resetDemoData() {
-  const db = defaultDB();
-  saveDB(db);
-  localStorage.removeItem(SESSION_KEY);
-}
+const THEME_KEY = 'loom_threads_theme_v2';
 
 export function getTheme() {
   return localStorage.getItem(THEME_KEY) || 'dark';
@@ -48,210 +12,342 @@ export function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
 }
 
-export function getSession() {
-  const raw = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
-  return raw ? JSON.parse(raw) : null;
+export async function getSession() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw new Error(error.message);
+  return data.session;
 }
 
-export function setSession(userId, remember = true) {
-  const payload = JSON.stringify({ userId, createdAt: nowISO() });
-  if (remember) localStorage.setItem(SESSION_KEY, payload);
-  else sessionStorage.setItem(SESSION_KEY, payload);
+export async function clearSession() {
+  await supabase.auth.signOut();
 }
 
-export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-  sessionStorage.removeItem(SESSION_KEY);
+export async function getCurrentUser() {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) return null;
+  return await getUserById(userData.user.id, true);
 }
 
-export function getCurrentUser() {
-  const session = getSession();
-  if (!session) return null;
-  return getDB().users.find(user => user.id === session.userId) || null;
-}
-
-export function findUserByLogin(login) {
-  const value = String(login).trim().toLowerCase();
-  return getDB().users.find(user => user.email.toLowerCase() === value || user.username.toLowerCase() === value) || null;
-}
-
-export function signup({ name, username, email, password }) {
-  const db = getDB();
+export async function signup({ name, username, email, password }) {
   const cleanUsername = normalizeUsername(username);
   const cleanEmail = String(email).trim().toLowerCase();
+  const cleanName = String(name).trim();
 
-  if (!name.trim()) throw new Error('Enter your name.');
+  if (!cleanName) throw new Error('Enter your name.');
   if (cleanUsername.length < 3) throw new Error('Username must be at least 3 characters.');
   if (!cleanEmail.includes('@')) throw new Error('Enter a valid email address.');
   if (String(password).length < 8) throw new Error('Password must be at least 8 characters.');
-  if (db.users.some(user => user.email.toLowerCase() === cleanEmail)) throw new Error('Email is already registered.');
-  if (db.users.some(user => user.username.toLowerCase() === cleanUsername)) throw new Error('Username is already taken.');
 
-  const newUser = {
-    id: uid('u'),
+  const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,
-    username: cleanUsername,
     password,
-    name: name.trim(),
-    bio: 'New here. Building my profile.',
-    avatar: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(name.trim())}`,
-    location: '',
-    website: '',
-    createdAt: nowISO()
-  };
-  db.users.push(newUser);
-  saveDB(db);
-  setSession(newUser.id, true);
-  return newUser;
+    options: {
+      emailRedirectTo: AUTH_REDIRECT_URL,
+      data: {
+        name: cleanName,
+        username: cleanUsername,
+        avatar_url: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(cleanName)}`
+      }
+    }
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-export function login({ login, password, remember }) {
-  const user = findUserByLogin(login);
-  if (!user || user.password !== password) throw new Error('Invalid email/username or password.');
-  setSession(user.id, remember);
-  return user;
+export async function login({ login, password }) {
+  const identifier = String(login).trim().toLowerCase();
+  if (!identifier) throw new Error('Enter your email or username.');
+
+  let email = identifier;
+  if (!identifier.includes('@')) {
+    const { data, error } = await supabase.rpc('resolve_login_email', { identifier });
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Invalid email/username or password.');
+    email = data;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error('Invalid email/username or password.');
+  return data.user;
 }
 
-export function updateProfile(userId, updates) {
-  const db = getDB();
-  const user = db.users.find(item => item.id === userId);
-  if (!user) throw new Error('User not found.');
+export async function updateProfile(userId, updates) {
   const cleanUsername = normalizeUsername(updates.username);
   if (cleanUsername.length < 3) throw new Error('Username must be at least 3 characters.');
-  if (db.users.some(item => item.id !== userId && item.username.toLowerCase() === cleanUsername)) throw new Error('Username is already taken.');
-  Object.assign(user, {
-    name: updates.name.trim() || user.name,
+
+  const payload = {
+    name: String(updates.name || '').trim(),
     username: cleanUsername,
-    bio: updates.bio.trim(),
-    avatar: updates.avatar.trim() || user.avatar,
-    location: updates.location.trim(),
-    website: updates.website.trim()
-  });
-  saveDB(db);
-  return user;
+    bio: String(updates.bio || '').trim(),
+    avatar_url: String(updates.avatar || '').trim(),
+    location: String(updates.location || '').trim(),
+    website: String(updates.website || '').trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  if (!payload.name) throw new Error('Name cannot be empty.');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(payload)
+    .eq('id', userId)
+    .select(publicProfileColumns())
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapProfile(data);
 }
 
-export function getUserById(id) {
-  return getDB().users.find(user => user.id === id) || null;
+function publicProfileColumns() {
+  return 'id, username, name, bio, avatar_url, location, website, created_at, updated_at';
 }
 
-export function getUserByUsername(username) {
-  return getDB().users.find(user => user.username.toLowerCase() === String(username).toLowerCase()) || null;
+function mapProfile(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    username: row.username,
+    name: row.name || row.username || 'Builder',
+    bio: row.bio || '',
+    avatar: row.avatar_url || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(row.name || row.username || 'Builder')}`,
+    location: row.location || '',
+    website: row.website || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
 }
 
-export function getPosts() {
-  return getDB().posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+function mapComment(row) {
+  return {
+    id: row.id,
+    postId: row.post_id,
+    userId: row.user_id,
+    content: row.content,
+    createdAt: row.created_at
+  };
 }
 
-export function getPostsByUser(userId) {
-  return getPosts().filter(post => post.userId === userId);
+function mapPost(row) {
+  const likes = row.likes?.map(item => item.user_id) || [];
+  const comments = row.comments?.map(mapComment) || [];
+  return {
+    id: row.id,
+    userId: row.user_id,
+    content: row.content,
+    createdAt: row.created_at,
+    likes,
+    comments,
+    author: mapProfile(row.profiles)
+  };
 }
 
-export function createPost(userId, content) {
+export async function getUserById(id) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(publicProfileColumns())
+    .eq('id', id)
+    .single();
+  if (error) return null;
+  return mapProfile(data);
+}
+
+export async function getUsersByIds(ids = []) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return new Map();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(publicProfileColumns())
+    .in('id', unique);
+  if (error) throw new Error(error.message);
+  return new Map(data.map(row => [row.id, mapProfile(row)]));
+}
+
+export async function getUserByUsername(username) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(publicProfileColumns())
+    .eq('username', String(username).toLowerCase())
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapProfile(data);
+}
+
+export async function getPosts() {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      id, user_id, content, created_at,
+      profiles!posts_user_id_fkey (${publicProfileColumns()}),
+      likes (user_id),
+      comments (id, post_id, user_id, content, created_at)
+    `)
+    .order('created_at', { ascending: false })
+    .order('created_at', { foreignTable: 'comments', ascending: true });
+  if (error) throw new Error(error.message);
+  return data.map(mapPost);
+}
+
+export async function getPostsByUser(userId) {
+  const posts = await getPosts();
+  return posts.filter(post => post.userId === userId);
+}
+
+export async function createPost(userId, content) {
   const text = String(content).trim();
   if (text.length < 1) throw new Error('Post cannot be empty.');
   if (text.length > 500) throw new Error('Post must stay under 500 characters.');
-  const db = getDB();
-  const post = { id: uid('p'), userId, content: text, createdAt: nowISO(), likes: [], comments: [] };
-  db.posts.unshift(post);
-  saveDB(db);
-  return post;
+
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({ user_id: userId, content: text })
+    .select('id, user_id, content, created_at')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-export function deletePost(postId, userId) {
-  const db = getDB();
-  const post = db.posts.find(item => item.id === postId);
-  if (!post || post.userId !== userId) throw new Error('You can only delete your own posts.');
-  db.posts = db.posts.filter(item => item.id !== postId);
-  saveDB(db);
+export async function deletePost(postId, userId) {
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
 }
 
-export function toggleLike(postId, userId) {
-  const db = getDB();
-  const post = db.posts.find(item => item.id === postId);
-  if (!post) throw new Error('Post not found.');
-  const liked = post.likes.includes(userId);
-  post.likes = liked ? post.likes.filter(id => id !== userId) : [...post.likes, userId];
-  if (!liked && post.userId !== userId) {
-    db.notifications.unshift({ id: uid('n'), userId: post.userId, actorId: userId, type: 'like', text: 'liked your post', createdAt: nowISO(), read: false });
+export async function toggleLike(postId, userId) {
+  const { data: existing, error: lookupError } = await supabase
+    .from('likes')
+    .select('id')
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+
+  if (existing) {
+    const { error } = await supabase.from('likes').delete().eq('id', existing.id);
+    if (error) throw new Error(error.message);
+    return false;
   }
-  saveDB(db);
-  return !liked;
+
+  const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: userId });
+  if (error) throw new Error(error.message);
+  await createNotificationForPost(postId, userId, 'like', 'liked your post');
+  return true;
 }
 
-export function addComment(postId, userId, content) {
+export async function addComment(postId, userId, content) {
   const text = String(content).trim();
   if (!text) throw new Error('Comment cannot be empty.');
-  const db = getDB();
-  const post = db.posts.find(item => item.id === postId);
-  if (!post) throw new Error('Post not found.');
-  post.comments.push({ id: uid('c'), userId, content: text, createdAt: nowISO() });
-  if (post.userId !== userId) {
-    db.notifications.unshift({ id: uid('n'), userId: post.userId, actorId: userId, type: 'comment', text: 'commented on your post', createdAt: nowISO(), read: false });
-  }
-  saveDB(db);
+
+  const { error } = await supabase
+    .from('comments')
+    .insert({ post_id: postId, user_id: userId, content: text });
+  if (error) throw new Error(error.message);
+  await createNotificationForPost(postId, userId, 'comment', 'commented on your post');
 }
 
-export function isFollowing(followerId, followingId) {
-  return getDB().follows.some(item => item.followerId === followerId && item.followingId === followingId);
+async function createNotificationForPost(postId, actorId, type, text) {
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+  if (!post || post.user_id === actorId) return;
+  await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: actorId, type, text, post_id: postId });
 }
 
-export function toggleFollow(followerId, followingId) {
+export async function isFollowing(followerId, followingId) {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
+export async function toggleFollow(followerId, followingId) {
   if (followerId === followingId) throw new Error('You cannot follow yourself.');
-  const db = getDB();
-  const exists = db.follows.some(item => item.followerId === followerId && item.followingId === followingId);
-  if (exists) db.follows = db.follows.filter(item => !(item.followerId === followerId && item.followingId === followingId));
-  else {
-    db.follows.push({ followerId, followingId, createdAt: nowISO() });
-    db.notifications.unshift({ id: uid('n'), userId: followingId, actorId: followerId, type: 'follow', text: 'started following you', createdAt: nowISO(), read: false });
+  const alreadyFollowing = await isFollowing(followerId, followingId);
+
+  if (alreadyFollowing) {
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId);
+    if (error) throw new Error(error.message);
+    return false;
   }
-  saveDB(db);
-  return !exists;
+
+  const { error } = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
+  if (error) throw new Error(error.message);
+  await supabase.from('notifications').insert({ user_id: followingId, actor_id: followerId, type: 'follow', text: 'started following you' });
+  return true;
 }
 
-export function getStats(userId) {
-  const db = getDB();
-  const posts = db.posts.filter(post => post.userId === userId);
-  return {
-    posts: posts.length,
-    followers: db.follows.filter(item => item.followingId === userId).length,
-    following: db.follows.filter(item => item.followerId === userId).length,
-    likes: posts.reduce((sum, post) => sum + post.likes.length, 0)
-  };
+export async function getStats(userId) {
+  const [{ count: posts }, { count: followers }, { count: following }, { data: userPosts }] = await Promise.all([
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId),
+    supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId),
+    supabase.from('posts').select('id, likes(id)').eq('user_id', userId)
+  ]);
+
+  const likes = (userPosts || []).reduce((sum, post) => sum + (post.likes?.length || 0), 0);
+  return { posts: posts || 0, followers: followers || 0, following: following || 0, likes };
 }
 
-export function searchUsers(query, currentUserId) {
-  const q = String(query).trim().toLowerCase();
-  return getDB().users
-    .filter(user => user.id !== currentUserId)
-    .filter(user => !q || user.name.toLowerCase().includes(q) || user.username.toLowerCase().includes(q) || user.bio.toLowerCase().includes(q));
+export async function searchUsers(query, currentUserId) {
+  const q = String(query).trim().replace(/[%,()]/g, '');
+  let builder = supabase.from('profiles').select(publicProfileColumns()).neq('id', currentUserId).order('created_at', { ascending: false });
+  if (q) builder = builder.or(`username.ilike.%${q}%,name.ilike.%${q}%,bio.ilike.%${q}%`);
+  const { data, error } = await builder.limit(30);
+  if (error) throw new Error(error.message);
+  return data.map(mapProfile);
 }
 
-export function getInbox(userId) {
-  return getDB().messages
-    .filter(item => item.toId === userId || item.fromId === userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+export async function getFollowingMap(currentUserId, userIds = []) {
+  const unique = [...new Set(userIds.filter(id => id && id !== currentUserId))];
+  if (!unique.length) return new Map();
+  const { data, error } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', currentUserId)
+    .in('following_id', unique);
+  if (error) throw new Error(error.message);
+  return new Map(data.map(row => [row.following_id, true]));
 }
 
-export function sendMessage(fromId, toId, text) {
+export async function getInbox(userId) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('id, from_id, to_id, text, read, created_at')
+    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data.map(row => ({ id: row.id, fromId: row.from_id, toId: row.to_id, text: row.text, read: row.read, createdAt: row.created_at }));
+}
+
+export async function sendMessage(fromId, toId, text) {
   const body = String(text).trim();
   if (!body) throw new Error('Message cannot be empty.');
-  const db = getDB();
-  db.messages.unshift({ id: uid('m'), fromId, toId, text: body, createdAt: nowISO(), read: false });
-  db.notifications.unshift({ id: uid('n'), userId: toId, actorId: fromId, type: 'message', text: 'sent you a message', createdAt: nowISO(), read: false });
-  saveDB(db);
+  const { error } = await supabase.from('messages').insert({ from_id: fromId, to_id: toId, text: body });
+  if (error) throw new Error(error.message);
+  await supabase.from('notifications').insert({ user_id: toId, actor_id: fromId, type: 'message', text: 'sent you a message' });
 }
 
-export function getNotifications(userId) {
-  return getDB().notifications
-    .filter(item => item.userId === userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+export async function getNotifications(userId) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, user_id, actor_id, type, text, read, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data.map(row => ({ id: row.id, userId: row.user_id, actorId: row.actor_id, type: row.type, text: row.text, read: row.read, createdAt: row.created_at }));
 }
 
-export function markNotificationsRead(userId) {
-  const db = getDB();
-  db.notifications.forEach(item => {
-    if (item.userId === userId) item.read = true;
-  });
-  saveDB(db);
+export async function markNotificationsRead(userId) {
+  const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+  if (error) throw new Error(error.message);
 }

@@ -4,10 +4,13 @@ import { getCurrentUser, login, signup, getTheme, setTheme } from './store.js';
 setTheme(getTheme());
 
 const authMode = document.body.dataset.auth;
-if (authMode) {
-  if (getCurrentUser()) navigate('index.html');
+if (authMode) bootAuth(authMode);
+
+async function bootAuth(mode) {
+  const currentUser = await getCurrentUser();
+  if (currentUser) navigate('index.html');
   setupPasswordToggles();
-  setupAuthForms(authMode);
+  setupAuthForms(mode);
 }
 
 function setupPasswordToggles() {
@@ -27,36 +30,52 @@ function setupAuthForms(mode) {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
   });
+
   if (mode === 'login') {
-    $('#loginForm').addEventListener('submit', event => {
+    $('#loginForm').addEventListener('submit', async event => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget));
       try {
-        login({ login: data.login, password: data.password, remember: Boolean(data.remember) });
+        setLoading(event.submitter, true, 'Logging in...');
+        await login({ login: data.login, password: data.password });
         toast('Welcome back.');
         setTimeout(() => navigate('index.html'), 250);
       } catch (error) {
         showError(error.message);
+      } finally {
+        setLoading(event.submitter, false, 'Login');
       }
     });
   }
+
   if (mode === 'signup') {
-    $('#signupForm').addEventListener('submit', event => {
+    $('#signupForm').addEventListener('submit', async event => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget));
       try {
-        signup(data);
-        toast('Account created.');
-        setTimeout(() => navigate('index.html'), 250);
+        setLoading(event.submitter, true, 'Creating...');
+        await signup(data);
+        toast('Account created. Check your email if confirmation is enabled.');
+        $('#authError').hidden = false;
+        $('#authError').textContent = 'Account created. If email confirmation is enabled in Supabase, confirm your email first, then log in.';
+        event.currentTarget.reset();
       } catch (error) {
         showError(error.message);
+      } finally {
+        setLoading(event.submitter, false, 'Create account');
       }
     });
   }
 }
 
+function setLoading(button, loading, text) {
+  if (!button) return;
+  button.disabled = loading;
+  button.textContent = text;
+}
+
 function showError(message) {
-  const error = $('#authError');
-  error.textContent = message;
-  error.hidden = false;
+  const box = $('#authError');
+  box.hidden = false;
+  box.textContent = message;
 }
