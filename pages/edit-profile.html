@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit Profile · Loom Threads</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body data-page="edit-profile">
+  <div class="app-shell" id="appShell">
+    <main class="main-view">
+      <header class="page-head"><h1>Edit profile</h1><p>Tune your identity. Keep it clean and premium.</p></header>
+      <form class="settings-card card" id="editProfileForm">
+        <label>Full name
+          <input name="name" required>
+        </label>
+        <label>Username
+          <input name="username" required>
+        </label>
+        <label>Bio
+          <textarea name="bio" maxlength="180"></textarea>
+        </label>
+        <label>Profile picture URL
+          <input name="avatar" type="url" placeholder="https://...">
+        </label>
+        <label>Location
+          <input name="location" placeholder="Athens">
+        </label>
+        <label>Website
+          <input name="website" type="url" placeholder="https://your-site.com">
+        </label>
+        <div class="form-actions">
+          <a class="ghost-btn" href="profile.html">Cancel</a>
+          <button class="primary-btn" type="submit">Save profile</button>
+        </div>
+      </form>
+    </main>
+  </div>
+  <script type="module" src="../assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signup · Loom Threads</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="auth-body" data-auth="signup">
+  <main class="auth-card">
+    <div class="auth-top">
+      <a class="logo-lockup" href="signup.html"><img src="assets/img/logo.svg" alt="Loom Threads logo"><span>Loom</span></a>
+      <button class="theme-mini" id="themeMini" type="button">Theme</button>
+    </div>
+    <h1>Create your account.</h1>
+    <p>Start with a clean local MVP today. Upgrade to a real backend later without rebuilding the product.</p>
+    <div class="error-box" id="authError" hidden></div>
+    <form class="form-stack" id="signupForm">
+      <label>Full name
+        <input name="name" autocomplete="name" placeholder="Your name" required>
+      </label>
+      <label>Username
+        <input name="username" autocomplete="username" placeholder="futurebuilder" required>
+      </label>
+      <label>Email
+        <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </label>
+      <label>Password
+        <span class="password-wrap">
+          <input id="signupPassword" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" required>
+          <button type="button" data-toggle-password="#signupPassword">Show</button>
+        </span>
+      </label>
+      <button class="primary-btn" type="submit">Create account</button>
+    </form>
+    <p class="auth-switch">Already have an account? <a href="login.html">Login</a></p>
+  </main>
+  <script type="module" src="assets/js/auth.js"></script>
+</body>
+</html>
