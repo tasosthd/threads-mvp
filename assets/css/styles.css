@@ -249,6 +249,7 @@ input:focus, textarea:focus, select:focus { border-color: color-mix(in srgb, var
 .conversation-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .conversation-top strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .conversation-top small, .conversation-main span { color:var(--muted); font-size:.84rem; }
+.conversation-top small { white-space:nowrap; font-variant-numeric:tabular-nums; }
 .conversation-main p { margin:2px 0 0; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .unread-dot { min-width:23px; height:23px; padding:0 7px; display:inline-grid; place-items:center; border-radius:999px; background:var(--primary); color:var(--primary-text); font-size:.78rem; }
 
@@ -262,9 +263,10 @@ input:focus, textarea:focus, select:focus { border-color: color-mix(in srgb, var
 .chat-thread { padding:16px; overflow:auto; min-height:420px; max-height:calc(100vh - 190px); display:flex; flex-direction:column; gap:9px; scroll-behavior:smooth; }
 .chat-bubble { max-width:min(78%, 540px); padding:11px 13px; border-radius:20px; animation:rise .2s ease both; overflow-wrap:anywhere; }
 .chat-bubble p { margin:0; line-height:1.45; }
-.chat-bubble small { display:block; margin-top:5px; font-size:.74rem; color:var(--muted); }
+.chat-bubble small,
+.message-time { display:block; margin-top:6px; font-size:.74rem; line-height:1.2; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:.01em; }
 .chat-bubble.mine { align-self:flex-end; background:var(--primary); color:var(--primary-text); border-bottom-right-radius:7px; }
-.chat-bubble.mine small { color:color-mix(in srgb, var(--primary-text) 75%, transparent); }
+.chat-bubble.mine small, .chat-bubble.mine .message-time { color:color-mix(in srgb, var(--primary-text) 75%, transparent); text-align:right; }
 .chat-bubble.theirs { align-self:flex-start; background:var(--card-strong); border:1px solid var(--line); color:var(--text); border-bottom-left-radius:7px; }
 .chat-bubble.sending { opacity:.75; }
 .chat-form { display:grid; grid-template-columns:1fr auto; gap:10px; padding:10px; margin-top:12px; position:sticky; bottom:12px; }

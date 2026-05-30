@@ -2,11 +2,11 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 // 1) Paste your Supabase Project URL here.
 // Supabase dashboard: Project Settings → API → Project URL
-export const SUPABASE_URL = 'https://aovikqmgarbvrssoxpqh.supabase.co';
+export const SUPABASE_URL = 'PASTE_YOUR_SUPABASE_PROJECT_URL_HERE';
 
 // 2) Paste your Supabase anon/public key here.
 // Supabase dashboard: Project Settings → API → Project API keys → anon public
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdmlrcW1nYXJidnJzc294cHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNTQ4NDEsImV4cCI6MjA5NTczMDg0MX0.A2dwDwUpwk2db9wVkG2YiUoriLAmFX1y3oU-hOhfcgI';
+export const SUPABASE_ANON_KEY = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
 
 // 3) This is the fallback/redirect URL used after email confirmation.
 // In Supabase dashboard add the same URL in Authentication → URL Configuration → Redirect URLs.

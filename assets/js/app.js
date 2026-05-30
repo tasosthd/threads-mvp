@@ -1,4 +1,4 @@
-import { $, $$, escapeHTML, navigate, setPageTitle, toast, timeAgo } from './helpers.js';
+import { $, $$, escapeHTML, navigate, setPageTitle, toast, timeAgo, formatMessageTimestamp, formatInboxTimestamp } from './helpers.js';
 import { initShell, renderComposer, renderPost, wirePosts, renderProfileHeader, wireFollowButtons, emptyState } from './components.js';
 import {
   getCurrentUser,
@@ -172,7 +172,7 @@ function renderConversationPreview(item) {
     <a class="conversation-card card ${item.unreadCount ? 'has-unread' : ''}" href="chat.html?user=${user.id}">
       <img src="${escapeHTML(user.avatar)}" alt="${escapeHTML(user.name)} avatar">
       <div class="conversation-main">
-        <div class="conversation-top"><strong>${escapeHTML(user.name)}</strong><small>${timeAgo(item.lastMessage.createdAt)}</small></div>
+        <div class="conversation-top"><strong>${escapeHTML(user.name)}</strong><small>${formatInboxTimestamp(item.lastMessage.createdAt)}</small></div>
         <span>@${escapeHTML(user.username)}</span>
         <p>${outgoing ? 'You: ' : ''}${escapeHTML(item.lastMessage.content)}</p>
       </div>
@@ -211,7 +211,7 @@ async function initChat() {
     chat.innerHTML = messages.length ? messages.map(message => `
       <article class="chat-bubble ${message.senderId === currentUser.id ? 'mine' : 'theirs'}">
         <p>${escapeHTML(message.content)}</p>
-        <small>${timeAgo(message.createdAt)}${message.senderId === currentUser.id && message.isRead ? ' · Read' : ''}</small>
+        <small class="message-time">${formatMessageTimestamp(message.createdAt)}${message.senderId === currentUser.id && message.isRead ? ' · Read' : ''}</small>
       </article>
     `).join('') : emptyState('No messages yet', `Send ${escapeHTML(otherUser.name)} the first message.`);
     requestAnimationFrame(() => chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' }));
@@ -223,7 +223,7 @@ async function initChat() {
     if (!body) return;
     const optimistic = document.createElement('article');
     optimistic.className = 'chat-bubble mine sending';
-    optimistic.innerHTML = `<p>${escapeHTML(body)}</p><small>Sending...</small>`;
+    optimistic.innerHTML = `<p>${escapeHTML(body)}</p><small class="message-time">Sending...</small>`;
     chat.appendChild(optimistic);
     chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
     input.value = '';

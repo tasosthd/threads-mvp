@@ -101,3 +101,16 @@ http://127.0.0.1:5500/login.html
 ## Deploy
 
 Push the folder to GitHub, import to Vercel, deploy, then add your Vercel URLs to Supabase Authentication URL Configuration.
+
+
+## Message timestamp behavior
+
+Chat messages now use the Supabase `messages.created_at` value and format it in the visitor's browser timezone using 24-hour time.
+
+Examples:
+
+- `Today, 14:35`
+- `Yesterday, 21:10`
+- `30 May 2026, 09:42`
+
+Inbox previews also use fixed day/time labels, never relative labels like `2 seconds ago` or `just now`.

@@ -21,6 +21,67 @@ export function timeAgo(dateValue) {
   return 'now';
 }
 
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+function formatHHMM(date) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
+}
+
+function formatMonthDate(date) {
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  }).format(date);
+}
+
+export function formatMessageTimestamp(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const time = formatHHMM(date);
+
+  if (isSameLocalDay(date, now)) return `Today, ${time}`;
+  if (isSameLocalDay(date, yesterday)) return `Yesterday, ${time}`;
+
+  return `${formatMonthDate(date)}, ${time}`;
+}
+
+export function formatInboxTimestamp(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const time = formatHHMM(date);
+
+  if (isSameLocalDay(date, now)) return `Today, ${time}`;
+  if (isSameLocalDay(date, yesterday)) return `Yesterday, ${time}`;
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
+}
+
+
 export function escapeHTML(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
