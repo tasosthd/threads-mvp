@@ -8,6 +8,8 @@ No Google login. No Apple login. No Facebook login. No OAuth. Email/username + p
 
 - Custom signup page
 - Custom login page
+- Forgot password page
+- Reset password page
 - Email or username login
 - Password show/hide button
 - Supabase email/password authentication
@@ -41,6 +43,8 @@ threads-mvp/
 ├── index.html
 ├── login.html
 ├── signup.html
+├── forgot-password.html
+├── reset-password.html
 ├── pages/
 │   ├── search.html
 │   ├── create.html
@@ -179,6 +183,7 @@ assets/js/supabase-config.js
 
 ```js
 export const AUTH_REDIRECT_URL = `${window.location.origin}/login.html`;
+export const PASSWORD_RESET_REDIRECT_URL = `${window.location.origin}/reset-password.html`;
 ```
 
 In Supabase, go to:
@@ -209,13 +214,16 @@ Then add Redirect URLs:
 
 ```txt
 http://127.0.0.1:5500/login.html
+http://127.0.0.1:5500/reset-password.html
 https://your-app.vercel.app/login.html
+https://your-app.vercel.app/reset-password.html
 ```
 
 If you use a custom domain later, add that too:
 
 ```txt
 https://yourdomain.com/login.html
+https://yourdomain.com/reset-password.html
 ```
 
 ## Step 4: Enable email/password auth

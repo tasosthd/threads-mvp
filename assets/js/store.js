@@ -1,4 +1,4 @@
-import { supabase, AUTH_REDIRECT_URL } from './supabase-config.js';
+import { supabase, AUTH_REDIRECT_URL, PASSWORD_RESET_REDIRECT_URL } from './supabase-config.js';
 import { normalizeUsername } from './helpers.js';
 
 const THEME_KEY = 'loom_threads_theme_v2';
@@ -69,6 +69,28 @@ export async function login({ login, password }) {
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error('Invalid email/username or password.');
+  return data.user;
+}
+
+
+export async function requestPasswordReset(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail.includes('@')) throw new Error('Enter the email address connected to your account.');
+
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    redirectTo: PASSWORD_RESET_REDIRECT_URL
+  });
+
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+export async function updatePassword(newPassword) {
+  const password = String(newPassword || '');
+  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+
+  const { data, error } = await supabase.auth.updateUser({ password });
+  if (error) throw new Error(error.message);
   return data.user;
 }
 

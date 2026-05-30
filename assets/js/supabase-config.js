@@ -14,6 +14,11 @@ export const SUPABASE_ANON_KEY = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
 // Vercel example: https://your-domain.vercel.app/login.html
 export const AUTH_REDIRECT_URL = `${window.location.origin}/login.html`;
 
+// 4) Password reset redirect URL. Add this URL in Supabase Authentication → URL Configuration → Redirect URLs.
+// Local example: http://127.0.0.1:5500/reset-password.html
+// Vercel example: https://your-domain.vercel.app/reset-password.html
+export const PASSWORD_RESET_REDIRECT_URL = `${window.location.origin}/reset-password.html`;
+
 const missingConfig =
   SUPABASE_URL.includes('PASTE_') ||
   SUPABASE_ANON_KEY.includes('PASTE_');
